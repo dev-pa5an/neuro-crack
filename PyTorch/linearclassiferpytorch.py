@@ -81,112 +81,78 @@ dataset_val=Dataset(transform=transform,train=False)
 size_of_image=3*227*227
 
 
-"""<h2 id="Question"> Question <h2>
-
-<b> Create a custom module for Softmax for two classes,called model. The input size should be the <code>size_of_image</code>, you should record the maximum accuracy achieved on the validation data for the different epochs. For example if the 5 epochs the accuracy was 0.5, 0.2, 0.64,0.77, 0.66 you would select 0.77.</b>
-
-Train the model with the following free parameter values:
-
-<b>Parameter Values</b>
-   <li>learning rate:0.1 </li>
-   <li>momentum term:0.1 </li>
-   <li>batch size training:5</li>
-   <li>Loss function:Cross Entropy Loss </li>
-   <li>epochs:5</li>
-   <li>set: torch.manual_seed(0)</li>
+"""
+   learning rate:0.1 
+   momentum term:0.1 
+   batch size training:5
+   Loss function:Cross Entropy Loss
+   epochs:5</li>
+   set: torch.manual_seed(0)
 """
 
 torch.manual_seed(0)
 
-"""<b>Custom Module:</b>
+# Custom Module
 
-"""
+class Model(nn.Module):
+  def __init__(self, size_of_image):
+    super(Model, self).__init__()
+    self.flatten = nn.Flatten()  # Flatten the input image
+    self.linear = nn.Linear(size_of_image, 2)  # Linear layer for 2 classes
+    self.softmax = nn.Softmax(dim=1)  # Softmax for probability distribution
 
-class model(nn.Module):
-    def __init__(self, input_size):
-        super(model, self).__init__()
-        self.linear1 = nn.Linear(input_size, 128)
-        self.linear2 = nn.Linear(128, 64)
-        self.linear3 = nn.Linear(64, 2)
+    self.best_val_accuracy = 0.0  # Initialize best validation accuracy
 
-    def forward(self, x):
-        x = x.view(-1, size_of_image)  # Flatten the input image
-        x = F.relu(self.linear1(x))
-        x = F.relu(self.linear2(x))
-        x = self.linear3(x)
-        return x
-model = model(size_of_image)
+  def forward(self, x):
+    x = self.flatten(x)
+    x = self.linear(x)
+    x = self.softmax(x)  # Apply Softmax for classification probabilities
+    return x
 
-"""<b>Model Object:</b>
-
-"""
-
-
-
-"""<b>Optimizer:</b>
-
-"""
-
-learning_rate = 0.1
-momentum_term = 0.1
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum_term)
-
-"""<b>Criterion:</b>
-
-"""
-
-batch_size = 5
-
-"""<b>Data Loader Training and Validation:</b>
-
-"""
-
-train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
-val_loader = DataLoader(dataset_val, batch_size=batch_size)
-
-"""<b>Train Model with 5 epochs, should take 35 minutes: </b>
-
-"""
-
-epochs=5
-best_accuracy = 0.0
-for epoch in range(epochs):
-    for i, data in enumerate(train_loader, 0):
-        inputs, labels = data
+  def train_model(self, train_loader, val_loader, optimizer, criterion, epochs):
+    for epoch in range(epochs):
+      # Training loop
+      for images, labels in train_loader:
         optimizer.zero_grad()
-        outputs = model(inputs)
+        outputs = self(images)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
 
-    # Validation
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for data in val_loader:
-            images, labels = data
-            outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+      # Validation loop
+      val_correct = 0
+      val_total = 0
+      with torch.no_grad():
+        for images, labels in val_loader:
+          outputs = self(images)
+          _, predicted = torch.max(outputs.data, 1)
+          val_total += labels.size(0)
+          val_correct += (predicted == labels).sum().item()
 
-    accuracy = 100 * correct / total
-    if accuracy > best_accuracy:
-        best_accuracy = accuracy
+      val_accuracy = val_correct / val_total
+      if val_accuracy > self.best_val_accuracy:
+        self.best_val_accuracy = val_accuracy
 
-    print(f"Epoch {epoch+1}, Validation Accuracy: {accuracy:.2f}%")
+      print(f'Epoch [{epoch+1}/{epochs}], Validation Accuracy: {val_accuracy:.4f}')
 
-print(f"Maximum Validation Accuracy: {best_accuracy:.2f}%")
+    print(f'Best Validation Accuracy Achieved: {self.best_val_accuracy:.4f}')
+      
+# Model Object
+model = model(size_of_image)
 
-"""<h2>About the Authors:</h2>
- <a href=\"https://www.linkedin.com/in/joseph-s-50398b136/\">Joseph Santarcangelo</a> has a PhD in Electrical Engineering, his research focused on using machine learning, signal processing, and computer vision to determine how videos impact human cognition. Joseph has been working for IBM since he completed his PhD.
+# Optimizer
+learning_rate = 0.1
+momentum_term = 0.1
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum_term)
 
-## Change Log
+# Loss Function
+criterion = nn.CrossEntropyLoss()
 
-|  Date (YYYY-MM-DD) |  Version | Changed By  |  Change Description |
-|---|---|---|---|
-| 2020-09-18  | 2.0  | Shubham  |  Migrated Lab to Markdown and added to course repo in GitLab |
+# Data Loader Training and Validation
+batch_size = 5
+train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
+val_loader = DataLoader(dataset_val, batch_size=batch_size)
 
-Copyright &copy; 2019 <a href="cognitiveclass.ai"> cognitiveclass.ai</a>. This notebook and its source code are released under the terms of the <a href="https://bigdatauniversity.com/mit-license/?utm_medium=Exinfluencer&utm_source=Exinfluencer&utm_content=000026UJ&utm_term=10006555&utm_id=NA-SkillsNetwork-Channel-SkillsNetworkCoursesIBMDeveloperSkillsNetworkDL0321ENSkillsNetwork951-2022-01-01">MIT License</a>
-"""
+# Train Model
+model.train_model(train_loader, val_loader, optimizer, criterion, epochs=5)
 
