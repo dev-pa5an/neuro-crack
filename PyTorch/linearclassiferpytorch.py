@@ -141,8 +141,8 @@ class Model(nn.Module):
 model = model(size_of_image)
 
 # Optimizer
-learning_rate = 0.1
-momentum_term = 0.1
+learning_rate = 0.01
+momentum_term = 0.01
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum_term)
 
 # Loss Function
